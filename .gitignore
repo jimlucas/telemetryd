@@ -1,0 +1,8 @@
+/bin/
+/telemetryd
+/telemetrysim
+*.log
+*.prof
+*.test
+.coverage
+.env

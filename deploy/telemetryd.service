@@ -1,0 +1,37 @@
+[Unit]
+Description=Tarana gNMI dial-out current-state collector
+Documentation=file:/usr/local/share/doc/telemetryd/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=telemetryd
+Group=telemetryd
+EnvironmentFile=/etc/telemetryd/telemetryd.env
+ExecStart=/usr/local/bin/telemetryd $TELEMETRYD_OPTIONS
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+
+# Permit port 80 without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+# The current generation is memory-only and needs no writable filesystem.
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

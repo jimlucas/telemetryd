@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package Nokia.SROS;
+
+// Documentation-only description of the public dial-out wire contract.
+// telemetryd registers this RPC dynamically and therefore does not require
+// generated service bindings from this file.
+
+import "github.com/openconfig/gnmi/proto/gnmi/gnmi.proto";
+
+service DialoutTelemetry {
+  rpc Publish(stream gnmi.SubscribeResponse) returns (stream PublishResponse);
+}
+
+message PublishResponse {}

@@ -1,0 +1,7 @@
+.git
+bin
+*.log
+*.prof
+*.test
+.coverage
+.env

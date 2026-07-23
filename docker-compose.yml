@@ -1,0 +1,22 @@
+services:
+  telemetryd:
+    build:
+      context: .
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TELEMETRYD_TOKEN: "${TELEMETRYD_TOKEN:?set TELEMETRYD_TOKEN}"
+    command:
+      - --grpc-listen=:50051
+      - --http-listen=:8080
+      - --http-token=${TELEMETRYD_TOKEN}
+      - --ready-requires-stream=true
+    ports:
+      # Tarana destination port 80 on the host, unprivileged 50051 in container.
+      - "80:50051/tcp"
+      # Keep the monitoring API local unless a management network requires it.
+      - "127.0.0.1:8080:8080/tcp"

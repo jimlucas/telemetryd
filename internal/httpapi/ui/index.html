@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#08131b">
+  <meta name="description" content="telemetryd Tarana BN/RN capture and reconciliation console">
+  <title>telemetryd · CRT Console</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/ui/app.css">
+  <script defer src="/ui/app.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/ui/" aria-label="telemetryd capture console home">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-pulse"></span>
+          <span class="brand-core"></span>
+        </span>
+        <span class="brand-copy">
+          <strong>telemetryd</strong>
+          <small>Phosphor Console</small>
+        </span>
+      </a>
+
+      <div class="topbar-actions">
+        <div class="connection-pill" id="connection-pill" data-state="loading" role="status" aria-live="polite">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span id="connection-label">Connecting</span>
+        </div>
+        <span class="last-refresh" id="last-refresh">Never refreshed</span>
+        <button class="icon-button" id="refresh-button" type="button" title="Refresh now" aria-label="Refresh now">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+        </button>
+        <button class="token-button" id="token-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a4 4 0 1 0-7.9 1H3v4h3v3h3v3h4l4.1-4.1A4 4 0 0 0 15 7Z"/></svg>
+          <span>API token</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span></span> Tarana // dial-out telemetry</div>
+          <h1 id="hero-title">Glass-board view of BN / RN capture.</h1>
+          <p>Read the live feed like an old control-room terminal: receive time, device time, stream health, and RN state stay visible and separate, so bad telemetry never masquerades as a clean outage.</p>
+        </div>
+        <div class="hero-principles" aria-label="Capture semantics">
+          <div><span class="principle-number">01</span><strong>Last write retained</strong><small>Newest submission overwrites the current register.</small></div>
+          <div><span class="principle-number">02</span><strong>Clock truth preserved</strong><small>Missing or bad device time is never fabricated.</small></div>
+          <div><span class="principle-number">03</span><strong>Silence is ambiguous</strong><small>Unknown upstream remains distinct from reported offline.</small></div>
+        </div>
+      </section>
+
+      <section class="notice hidden" id="notice" role="alert">
+        <div class="notice-icon" aria-hidden="true">!</div>
+        <div><strong id="notice-title">Unable to load capture state</strong><p id="notice-copy"></p></div>
+        <button type="button" id="notice-action">Resolve</button>
+      </section>
+
+      <section class="kpi-grid" aria-label="Collector overview">
+        <article class="kpi-card accent-green">
+          <div class="kpi-top"><span>Active streams</span><span class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0M12 12v7"/></svg></span></div>
+          <strong class="kpi-value" id="kpi-streams">—</strong>
+          <small id="kpi-streams-note">Waiting for collector</small>
+        </article>
+        <article class="kpi-card accent-cyan">
+          <div class="kpi-top"><span>Capture rate</span><span class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h3l2-8 3 12 3-15 2 11h3"/></svg></span></div>
+          <strong class="kpi-value"><span id="kpi-rate">—</span><em>/s</em></strong>
+          <small id="kpi-rate-note">Update observations</small>
+        </article>
+        <article class="kpi-card accent-violet">
+          <div class="kpi-top"><span>Known devices</span><span class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4zM8 21h8M12 17v4M8 11h.01M12 11h.01M16 11h.01"/></svg></span></div>
+          <strong class="kpi-value" id="kpi-devices">—</strong>
+          <small id="kpi-devices-note">— BNs · — RNs</small>
+        </article>
+        <article class="kpi-card accent-amber">
+          <div class="kpi-top"><span>Timestamp defects</span><span class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M18.4 5.6 20 4"/></svg></span></div>
+          <strong class="kpi-value" id="kpi-time-defects">—</strong>
+          <small id="kpi-time-note">Missing, invalid, or regressed</small>
+        </article>
+        <article class="kpi-card accent-rose">
+          <div class="kpi-top"><span>Duplicate evidence</span><span class="kpi-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span></div>
+          <strong class="kpi-value" id="kpi-duplicates">—</strong>
+          <small id="kpi-duplicates-note">Exact + sender-reported</small>
+        </article>
+      </section>
+
+      <section class="insight-grid">
+        <article class="panel status-panel">
+          <header class="panel-header">
+            <div><span class="section-kicker">Reconciliation</span><h2>RN availability</h2></div>
+            <span class="panel-meta" id="rn-total-label">0 RNs</span>
+          </header>
+          <div class="status-body">
+            <div class="status-orbit" id="status-orbit" aria-label="RN status summary">
+              <svg class="orbit-svg" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="orbit-track" cx="60" cy="60" r="52" pathLength="100"></circle>
+                <circle class="orbit-progress" id="orbit-progress" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="0 100"></circle>
+              </svg>
+              <div class="orbit-value"><strong id="orbit-online-percent">—</strong><span>observed online</span></div>
+            </div>
+            <div class="status-legend" id="rn-status-legend"></div>
+          </div>
+          <p class="panel-footnote">Unknown upstream is intentionally distinct from reported offline.</p>
+        </article>
+
+        <article class="panel quality-panel">
+          <header class="panel-header">
+            <div><span class="section-kicker">Capture integrity</span><h2>What needs attention</h2></div>
+            <span class="panel-meta">Since process start</span>
+          </header>
+          <div class="quality-list" id="quality-list">
+            <div class="quality-row"><span class="quality-skeleton"></span></div>
+            <div class="quality-row"><span class="quality-skeleton"></span></div>
+            <div class="quality-row"><span class="quality-skeleton"></span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel capture-panel" aria-labelledby="captures-title">
+        <header class="capture-header">
+          <div>
+            <span class="section-kicker">Current-value store</span>
+            <h2 id="captures-title">Recently captured records</h2>
+            <p>Newest retained value per device and canonical path. This is current state, not an event log.</p>
+          </div>
+          <div class="capture-count"><strong id="capture-returned">—</strong><span id="capture-count-label">records shown</span></div>
+        </header>
+
+        <form class="filter-bar" id="capture-filter" autocomplete="off">
+          <label class="search-field">
+            <span class="sr-only">Search current records</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <input id="filter-search" name="q" type="search" placeholder="Search device, path, value, stream…">
+          </label>
+          <label><span>Device</span><select id="filter-kind" name="kind"><option value="">BN + RN</option><option value="rn">RN only</option><option value="bn">BN only</option></select></label>
+          <label><span>Timestamp</span><select id="filter-quality" name="quality"><option value="">Any quality</option><option value="source">Source time</option><option value="missing">Missing</option><option value="regressed">Regressed</option><option value="future">Future</option><option value="invalid_past">Invalid past</option></select></label>
+          <label><span>Window</span><select id="filter-since" name="since"><option value="">All retained</option><option value="1m">Last minute</option><option value="5m">Last 5 min</option><option value="15m">Last 15 min</option><option value="1h">Last hour</option><option value="24h">Last day</option></select></label>
+          <label><span>Rows</span><select id="filter-limit" name="limit"><option value="100">100</option><option value="250" selected>250</option><option value="500">500</option><option value="1000">1000</option></select></label>
+        </form>
+
+        <div class="table-wrap" id="capture-table-wrap">
+          <table class="data-table capture-table">
+            <thead><tr><th>Received</th><th>Device</th><th>Status</th><th>Path</th><th>Value</th><th>Source time</th><th>Evidence</th></tr></thead>
+            <tbody id="capture-rows"><tr class="empty-row"><td colspan="7"><span class="spinner"></span> Loading capture state…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-footer"><span id="capture-scan-note">Waiting for data</span><span>Click a row for complete record metadata</span></div>
+      </section>
+
+      <section class="detail-grid">
+        <article class="panel fleet-panel">
+          <header class="panel-header">
+            <div><span class="section-kicker">Inventory</span><h2>RN attention queue</h2></div>
+            <a href="/v1/rns?metrics=false" class="text-link" data-api-link>JSON <span aria-hidden="true">↗</span></a>
+          </header>
+          <div class="compact-table-wrap">
+            <table class="compact-table">
+              <thead><tr><th>RN</th><th>Parent BN</th><th>State</th><th>Last seen</th></tr></thead>
+              <tbody id="rn-rows"><tr class="empty-row"><td colspan="4">Loading RNs…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="panel-footer" id="rn-list-note">Showing most important states first</div>
+        </article>
+
+        <article class="panel stream-panel">
+          <header class="panel-header">
+            <div><span class="section-kicker">Transport</span><h2>Dial-out streams</h2></div>
+            <a href="/v1/streams" class="text-link" data-api-link>JSON <span aria-hidden="true">↗</span></a>
+          </header>
+          <div class="stream-list" id="stream-list"><div class="stream-empty"><span class="spinner"></span> Loading stream sessions…</div></div>
+          <div class="panel-footer">Closed sessions remain visible for diagnostics until pruned.</div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <span><strong>telemetryd</strong> · glass CRT current-state console</span>
+        <nav aria-label="API links"><a href="/v1/schema" data-api-link>API schema</a><a href="/metrics" data-api-link>Prometheus</a><a href="/healthz">Health</a></nav>
+      </footer>
+    </main>
+  </div>
+
+  <dialog class="dialog record-dialog" id="record-dialog">
+    <div class="dialog-shell">
+      <header><div><span class="section-kicker">Current record</span><h2 id="record-title">Record detail</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Close">×</button></header>
+      <div class="record-summary" id="record-summary"></div>
+      <dl class="record-details" id="record-details"></dl>
+      <details class="json-details"><summary>Raw JSON</summary><pre id="record-json"></pre></details>
+    </div>
+  </dialog>
+
+  <dialog class="dialog token-dialog" id="token-dialog">
+    <form class="dialog-shell" id="token-form" method="dialog">
+      <header><div><span class="section-kicker">Authentication</span><h2>Connect to the API</h2></div><button class="dialog-close" type="button" data-close-dialog aria-label="Close">×</button></header>
+      <p>When HTTP authentication is enabled, enter the bearer token configured for this collector. It is stored only in this browser tab.</p>
+      <label class="token-field"><span>Bearer token</span><input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste TELEMETRYD_TOKEN"></label>
+      <div class="token-status" id="token-status" role="status"></div>
+      <div class="dialog-actions"><button class="secondary-button" id="token-clear" type="button">Clear token</button><button class="primary-button" type="submit">Save and connect</button></div>
+    </form>
+  </dialog>
+
+  <noscript><div class="noscript">This capture console needs JavaScript. The JSON API remains available at <code>/v1/summary</code>.</div></noscript>
+</body>
+</html>
