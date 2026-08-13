@@ -31,18 +31,70 @@ func DecodeValue(value *gnmi.TypedValue) (model.DecodedValue, error) {
 		encoded := base64.StdEncoding.EncodeToString(typed.BytesVal)
 		return model.DecodedValue{Type: "bytes_base64", Data: encoded, Text: encoded}, nil
 	case *gnmi.TypedValue_FloatVal:
+
 		asFloat := float64(typed.FloatVal)
+
+		if math.IsNaN(asFloat) {
+			return model.DecodedValue{
+				Type: "float32_nan",
+				Data: nil,
+				Text: "",
+			}, nil
+		}
+
 		text := strconv.FormatFloat(asFloat, 'g', -1, 32)
-		if !finiteFloat(asFloat) {
-			return model.DecodedValue{Type: "float32_non_finite", Data: text, Text: text}, fmt.Errorf("non-finite float32 value %s", text)
+
+		if math.IsInf(asFloat, 0) {
+			return model.DecodedValue{
+				Type: "float32_non_finite",
+				Data: text,
+				Text: text,
+			}, fmt.Errorf("infinite float32 value %s", text)
 		}
-		return model.DecodedValue{Type: "float32", Data: asFloat, Text: text}, nil
+
+		return model.DecodedValue{
+			Type: "float32",
+			Data: asFloat,
+			Text: text,
+		}, nil
+
+		//		asFloat := float64(typed.FloatVal)
+		//		text := strconv.FormatFloat(asFloat, 'g', -1, 32)
+		//		if !finiteFloat(asFloat) {
+		//			return model.DecodedValue{Type: "float32_non_finite", Data: text, Text: text}, fmt.Errorf("non-finite float32 value %s", text)
+		//		}
+		//		return model.DecodedValue{Type: "float32", Data: asFloat, Text: text}, nil
 	case *gnmi.TypedValue_DoubleVal:
-		text := strconv.FormatFloat(typed.DoubleVal, 'g', -1, 64)
-		if !finiteFloat(typed.DoubleVal) {
-			return model.DecodedValue{Type: "float64_non_finite", Data: text, Text: text}, fmt.Errorf("non-finite float64 value %s", text)
+
+		if math.IsNaN(typed.DoubleVal) {
+			return model.DecodedValue{
+				Type: "float64_nan",
+				Data: nil,
+				Text: "",
+			}, nil
 		}
-		return model.DecodedValue{Type: "float64", Data: typed.DoubleVal, Text: text}, nil
+
+		text := strconv.FormatFloat(typed.DoubleVal, 'g', -1, 64)
+
+		if math.IsInf(typed.DoubleVal, 0) {
+			return model.DecodedValue{
+				Type: "float64_non_finite",
+				Data: text,
+				Text: text,
+			}, fmt.Errorf("infinite float64 value %s", text)
+		}
+
+		return model.DecodedValue{
+			Type: "float64",
+			Data: typed.DoubleVal,
+			Text: text,
+		}, nil
+
+		//		text := strconv.FormatFloat(typed.DoubleVal, 'g', -1, 64)
+		//		if !finiteFloat(typed.DoubleVal) {
+		//			return model.DecodedValue{Type: "float64_non_finite", Data: text, Text: text}, fmt.Errorf("non-finite float64 value %s", text)
+		//		}
+		//		return model.DecodedValue{Type: "float64", Data: typed.DoubleVal, Text: text}, nil
 	case *gnmi.TypedValue_DecimalVal:
 		text := decimalText(typed.DecimalVal)
 		return model.DecodedValue{Type: "decimal64", Data: text, Text: text}, nil
