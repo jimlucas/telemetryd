@@ -18,6 +18,7 @@ import (
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
@@ -183,9 +184,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	s.grpc = grpc.NewServer(options...)
+
+	// Register the existing Nokia-compatible dial-out service.
 	for _, descriptor := range buildDescriptors(s.cfg.Methods, s.handlePublish) {
 		s.grpc.RegisterService(descriptor, s)
 	}
+
+	// Register Tarana's native TNMI dial-out service.
+	registerTNMI(s.grpc, s)
 
 	healthServer := health.NewServer()
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
