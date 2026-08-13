@@ -129,18 +129,41 @@ func New(cfg Config, handler Handler, logger *slog.Logger) (*Server, error) {
 	}
 	normalizedMethods := make([]string, 0, len(cfg.Methods))
 	seenMethods := make(map[string]struct{}, len(cfg.Methods))
+
 	for _, configuredMethod := range cfg.Methods {
 		service, method, err := splitMethod(configuredMethod)
 		if err != nil {
 			return nil, err
 		}
+
 		fullMethod := "/" + service + "/" + method
+
 		if _, duplicate := seenMethods[fullMethod]; duplicate {
 			return nil, fmt.Errorf("duplicate gRPC method %q", fullMethod)
 		}
 		seenMethods[fullMethod] = struct{}{}
+
+		// tnmi.DialTcc is implemented natively by telemetryd.
+		//
+		// Older configurations may explicitly list the Tarana RPCs through
+		// --grpc-method. Treat those native methods as redundant rather than
+		// attempting to register tnmi.DialTcc twice.
+		if service == TNMIServiceName {
+			switch fullMethod {
+			case TNMIIsAliveMethod, TNMIPushSubscriptionUpdatesMethod:
+				continue
+			default:
+				return nil, fmt.Errorf(
+					"gRPC service %q is reserved for telemetryd's native Tarana TNMI implementation; unsupported configured method %q",
+					TNMIServiceName,
+					fullMethod,
+				)
+			}
+		}
+
 		normalizedMethods = append(normalizedMethods, fullMethod)
 	}
+
 	cfg.Methods = normalizedMethods
 	if (cfg.TLSCertFile == "") != (cfg.TLSKeyFile == "") {
 		return nil, errors.New("both TLS certificate and key are required")

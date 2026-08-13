@@ -68,3 +68,41 @@ func (*testHandler) CloseSession(string, string)          {}
 func (*testHandler) HandleResponse(context.Context, string, string, *gnmi.SubscribeResponse) error {
 	return nil
 }
+func TestNewNormalizesNativeTNMIMethods(t *testing.T) {
+	handler := &testHandler{}
+
+	server, err := New(Config{
+		Methods: []string{
+			DefaultMethod,
+			TNMIPushSubscriptionUpdatesMethod,
+			TNMIIsAliveMethod,
+		},
+	}, handler, slog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(server.cfg.Methods) != 1 {
+		t.Fatalf("method count = %d, want 1", len(server.cfg.Methods))
+	}
+
+	if server.cfg.Methods[0] != DefaultMethod {
+		t.Fatalf(
+			"method = %q, want %q",
+			server.cfg.Methods[0],
+			DefaultMethod,
+		)
+	}
+}
+
+func TestNewRejectsUnknownNativeTNMIMethod(t *testing.T) {
+	handler := &testHandler{}
+
+	if _, err := New(Config{
+		Methods: []string{
+			"/tnmi.DialTcc/UnknownMethod",
+		},
+	}, handler, slog.Default()); err == nil {
+		t.Fatal("unknown tnmi.DialTcc method unexpectedly accepted")
+	}
+}
