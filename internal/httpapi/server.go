@@ -354,7 +354,7 @@ func (s *Server) zabbixDiscoverBNs(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) zabbixDiscoverRNs(w http.ResponseWriter, r *http.Request) {
-	rns := s.store.RNs(time.Now().UTC(), false)
+	rns := s.store.RNs(time.Now().UTC(), true)
 	bnFilter := strings.TrimSpace(r.URL.Query().Get("bn"))
 	data := make([]map[string]string, 0, len(rns))
 	for _, rn := range rns {
@@ -362,15 +362,35 @@ func (s *Server) zabbixDiscoverRNs(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		data = append(data, map[string]string{
-			"{#RNID}":       rn.ID,
-			"{#RNHOSTNAME}": rn.Hostname,
-			"{#BNID}":       rn.ParentBNID,
-			"{#RNSTATUS}":   string(rn.Status),
-			"{#RNMAC}":      rn.MACAddress,
-			"{#SNMPINDEX}":  strconv.FormatUint(uint64(rn.SNMPIndex), 10),
+			"{#RNID}":         rn.ID,
+			"{#RNHOSTNAME}":   rn.Hostname,
+			"{#BNID}":         rn.ParentBNID,
+			"{#RNSTATUS}":     string(rn.Status),
+			"{#RNMAC}":        rn.MACAddress,
+			"{#SNMPINDEX}":    strconv.FormatUint(uint64(rn.SNMPIndex), 10),
+			"{#CONNECTIONID}": newestConnectionID(rn.Metrics),
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": data})
+}
+
+func newestConnectionID(metrics []state.MetricView) string {
+	var newestID string
+	var newestOrder uint64
+
+	for _, metric := range metrics {
+		connectionID := strings.TrimSpace(metric.Keys["connection_id"])
+		if connectionID == "" {
+			continue
+		}
+
+		if newestID == "" || metric.ObservationOrder > newestOrder {
+			newestID = connectionID
+			newestOrder = metric.ObservationOrder
+		}
+	}
+
+	return newestID
 }
 
 func (s *Server) zabbixValue(w http.ResponseWriter, r *http.Request) {
