@@ -48,6 +48,27 @@ func TestZabbixValueSupportsPathKeySelectors(t *testing.T) {
 	}
 }
 
+func TestNewestConnectionIDPrefersHighestObservationOrder(t *testing.T) {
+	metrics := []state.MetricView{
+		{Metric: model.Metric{
+			Keys:             map[string]string{"connection_id": "91"},
+			ObservationOrder: 40,
+		}},
+		{Metric: model.Metric{
+			Keys:             map[string]string{"connection_id": "7"},
+			ObservationOrder: 100,
+		}},
+		{Metric: model.Metric{
+			Keys:             map[string]string{"connection_id": "105"},
+			ObservationOrder: 75,
+		}},
+	}
+
+	if got := newestConnectionID(metrics); got != "7" {
+		t.Fatalf("newest connection ID = %q, want %q", got, "7")
+	}
+}
+
 func TestZabbixCollectorField(t *testing.T) {
 	store, _ := populatedStore(t)
 	server, err := New(Config{}, store, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -98,7 +119,9 @@ func TestZabbixDiscoveryAndAuthentication(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Data) != 1 || payload.Data[0]["{#RNID}"] != "RN-1" {
+	if len(payload.Data) != 1 ||
+		payload.Data[0]["{#RNID}"] != "RN-1" ||
+		payload.Data[0]["{#CONNECTIONID}"] != "7" {
 		t.Fatalf("discovery payload = %#v", payload.Data)
 	}
 
@@ -123,7 +146,7 @@ func populatedStore(t *testing.T) (*state.Store, time.Time) {
 	for radio, value := range []float64{-55, -62} {
 		path := model.Path{Elements: []model.PathElement{
 			{Name: "connections"},
-			{Name: "connection", Keys: map[string]string{"device-id": "RN-1"}},
+			{Name: "connection", Keys: map[string]string{"device-id": "RN-1", "id": "7"}},
 			{Name: "radios"},
 			{Name: "radio", Keys: map[string]string{"radio-id": strconv.Itoa(radio)}},
 			{Name: "state"},
